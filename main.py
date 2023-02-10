@@ -30,6 +30,7 @@ from regex import match
 
 # 导入配置
 from config import *   # noqa
+from free_size_config import *
 
 rooms = {}  # 记录各room状态
 
@@ -84,17 +85,21 @@ def get_time() -> str:
     return dt
 
 
-def record():
+def record(p, last_record_time):
     """
     录制过程中要执行的检测与判断
     """
-    global p, record_status, last_record_time, kill_times  # noqa
+    # global p, record_status, last_record_time, kill_times  # noqa
+    kill_times = 0
     while True:
+        if not rooms[room_id]['record'] or rooms[room_id]['wait']:
+            p.send_signal(signal.SIGTERM)
+            time.sleep(0.5)
         line = p.stdout.readline().decode()
         p.stdout.flush()
         logger.log(15, line.rstrip())
         if match('video:[0-9kmgB]* audio:[0-9kmgB]* subtitle:[0-9kmgB]*', line) or 'Exiting normally' in line:
-            record_status = False  # 如果FFmpeg正常结束录制则退出本循环
+            rooms[room_id]['record_status'] = False  # 如果FFmpeg正常结束录制则退出本循环
             break
         elif match('frame=[0-9]', line) or 'Opening' in line:
             last_record_time = get_timestamp()  # 获取最后录制的时间
@@ -117,15 +122,15 @@ def record():
             break
         if p.poll() is not None:  # 如果FFmpeg已退出但没有被上一个判断和本循环第一个判断捕捉到，则当作异常退出
             logger.error('ffmpeg未正常退出，请检查日志文件！')
-            record_status = False
+            rooms[room_id]['record_status'] = False
             break
 
 
-def main():
+def main(room_id):
     global rooms
-    global p, room_id, record_status, last_record_time, kill_times  # noqa
+    # global p, room_id, record_status, last_record_time, kill_times  # noqa
     while True:    
-        record_status = False
+        rooms[room_id]['record_status'] = False
         while True:
             logger.info('------------------------------')
             logger.info(f'正在检测直播间：{room_id}')
@@ -142,7 +147,7 @@ def main():
             if live_status:
                 break
             else:
-                logger.info(f'没有开播，等待{check_time}s重新开始检测')
+                logger.info(f'没有开播，等待{check_time}s重新开始检测\033[F\f')
             time.sleep(check_time)
         if not os.path.exists(os.path.join('download')):
             try:
@@ -167,7 +172,7 @@ def main():
                    m3u8_address, '-c:v', 'copy', '-c:a', 'copy', '-bsf:a', 'aac_adtstoasc',
                    '-f', 'segment', '-segment_time', str(
                        segment_time), '-segment_start_number', '1',
-                   os.path.join('download', f'{nick_name}_{room_id}-{get_time()}-{room_topic}.{file_extensions}'), '-y']
+                   os.path.join('download', f'{nick_name}_{room_id}-{get_time()}-{room_topic}_part%03d.{file_extensions}'), '-y']
         if debug:
             logger.debug('FFmpeg命令如下 ↓')
             command_str = ''
@@ -175,23 +180,23 @@ def main():
                 command_str += _
             logger.debug(command_str)
         p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=False)
-        record_status = True
+        rooms[room_id]['record_status'] = True
         start_time = last_record_time = get_timestamp()
         try:
-            t = threading.Thread(target=record)
+            t = threading.Thread(target=record, args=(p, last_record_time))
             t.start()
             while True:
-                if not record_status:
+                if not rooms[room_id]['record_status']:
                     break
                 if verbose or debug:
                     time.sleep(20)
                     logger.info(
-                        f'--==>>> 已录制 {round((get_timestamp() - start_time) / 60, 2)} 分钟 <<<==--')
+                        f'\033[K--==>>> {nick_name} 已录制 {round((get_timestamp() - start_time) / 60, 2)} 分钟 <<<==--\033[F\r')
                 else:
                     time.sleep(60)
                     logger.info(
-                        f'--==>>> 已录制 {int((get_timestamp() - start_time) / 60)} 分钟 <<<==--')
-                if not record_status:
+                        f'\033[K--==>>> {nick_name} 已录制 {int((get_timestamp() - start_time) / 60)} 分钟 <<<==--\033[F\r')
+                if not rooms[room_id]['record_status']:
                     break
         except KeyboardInterrupt:
             # p.send_signal(signal.CTRL_C_EVENT)
@@ -199,9 +204,12 @@ def main():
             logger.info('若长时间卡住，请再次按下ctrl+c (可能会损坏视频文件)')
             logger.info('Bye!')
             sys.exit(0)
-        kill_times = 0
+        if wait:
+            logger.info(f'空间不足，停止录制 {room_id}')
+            break
         logger.info('FFmpeg已退出，重新开始检测直播间')
         # time.sleep(check_time)
+    rooms.pop(room_id)
 
 
 if __name__ == '__main__':
@@ -211,15 +219,23 @@ if __name__ == '__main__':
     logger.info('准备开始录制...')
     time.sleep(0.3)
     while True:
+        run()
         try:
             from config import *
             for room_id in room_ids:
-                if room_id not in rooms:
-                rooms[room_id] = {"record": True}
-                t = threading.Thread(target=main, args=(room_id,))
-              t.start()
-            main()
-           time.sleep(10)
+                if room_id not in rooms and (not wait or room_id in keep):
+
+                    rooms[room_id] = {"record": True}
+                    if room_id in keep:
+                        rooms[room_id]['wait'] = False
+                    else:
+                        rooms[room_id]['wait'] = True
+                    t = threading.Thread(target=main, args=(room_id,))
+                    t.start()
+            for room_id in rooms.keys():
+                if room_id not in room_ids:
+                    rooms[room_id]['record'] = False
+            time.sleep(10)
         except KeyboardInterrupt:
             logger.info('Bye!')
             sys.exit(0)

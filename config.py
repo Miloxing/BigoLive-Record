@@ -4,9 +4,9 @@
 """
 *------------以下为可配置项-------------*
 """
-room_id = ['2tu521','asodel']  # 要录制的直播间ID
+room_ids = ['2tu521','asodel']  # 要录制的直播间ID
 segment_time = 3600  # 录播分段时长（单位：秒）
-check_time = 60  # 开播检测间隔（单位：秒）
+check_time = 30  # 开播检测间隔（单位：秒）
 file_extensions = 'flv'  # 录制文件后缀名（文件格式）
 verbose = True  # 是否打印ffmpeg输出信息到控制台
 debug = False  # 是否显示并保存调试信息（优先级高于 verbose）

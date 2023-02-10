@@ -29,7 +29,7 @@ def run():
     get_keep_list()
     get_free_size()
     if free_size <= 40 or (wait and free_size <= 45):
-        sys.stdout.write(f"\r\033[KÊ£Óà¿Õ¼ä{free_size}G, Í£Ö¹ÏÂÔØ")
+        sys.stdout.write(f"\r\033[Kå‰©ä½™ç©ºé—´{free_size}G, åœæ­¢ä¸‹è½½")
         wait = True
         # time.sleep(10)
     else:

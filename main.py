@@ -15,6 +15,7 @@
 # import ffmpy3  # noqa
 import logging
 import os
+import re
 import signal
 import sys
 import threading
@@ -30,8 +31,7 @@ from regex import match
 # 导入配置
 from config import *   # noqa
 
-record_status = False  # 录制状态，True为录制中
-kill_times = 0  # 尝试强制结束FFmpeg的次数
+rooms = {}  # 记录各room状态
 
 logging.addLevelName(15, 'FFmpeg')  # 自定义FFmpeg的日志级别
 logger = logging.getLogger('Record')
@@ -50,6 +50,8 @@ else:
     default_handler.setLevel(logging.INFO)
 default_handler.setFormatter(logging.Formatter(fms, datefmt=datefmt))
 logger.addHandler(default_handler)
+
+rstr = r"[\/\\\:\*\?\"\<\>\|\- \n]"
 
 if save_log:
     # file_handler = logging.FileHandler("debug.log", mode='w+', encoding='utf-8')
@@ -120,8 +122,9 @@ def record():
 
 
 def main():
+    global rooms
     global p, room_id, record_status, last_record_time, kill_times  # noqa
-    while True:
+    while True:    
         record_status = False
         while True:
             logger.info('------------------------------')
@@ -134,7 +137,8 @@ def main():
                 logger.error(f'无法连接至B站API，等待{check_time}s后重新开始检测')
                 time.sleep(check_time)
                 continue
-            live_status = loads(room_info.text)['data']['hls_src']
+            room_info = loads(room_info.text)['data']
+            live_status = room_info['hls_src']
             if live_status:
                 break
             else:
@@ -151,6 +155,8 @@ def main():
             sys.exit(1)
         logger.info('正在直播，准备开始录制')
         m3u8_address = live_status
+        nick_name = re.sub(rstr, "_", room_info['nick_name'])
+        room_topic = re.sub(rstr, "_", room_info['roomTopic'])
         # 下面命令中的timeout单位为微秒，10000000us为10s（https://www.cnblogs.com/zhifa/p/12345376.html）
         command = ['ffmpeg', '-rw_timeout', '10000000', '-timeout', '10000000', '-listen_timeout', '10000000',
                    '-headers',
@@ -161,7 +167,7 @@ def main():
                    m3u8_address, '-c:v', 'copy', '-c:a', 'copy', '-bsf:a', 'aac_adtstoasc',
                    '-f', 'segment', '-segment_time', str(
                        segment_time), '-segment_start_number', '1',
-                   os.path.join('download', f'[{room_id}]_{get_time()}_part%03d.{file_extensions}'), '-y']
+                   os.path.join('download', f'{nick_name}_{room_id}-{get_time()}-{room_topic}.{file_extensions}'), '-y']
         if debug:
             logger.debug('FFmpeg命令如下 ↓')
             command_str = ''
@@ -204,8 +210,16 @@ if __name__ == '__main__':
     logger.info('如要修改录制设置，请以纯文本方式打开.py文件')
     logger.info('准备开始录制...')
     time.sleep(0.3)
-    try:
-        main()
-    except KeyboardInterrupt:
-        logger.info('Bye!')
-        sys.exit(0)
+    while True:
+        try:
+            from config import *
+            for room_id in room_ids:
+                if room_id not in rooms:
+                rooms[room_id] = {"record": True}
+                t = threading.Thread(target=main, args=(room_id,))
+              t.start()
+            main()
+           time.sleep(10)
+        except KeyboardInterrupt:
+            logger.info('Bye!')
+            sys.exit(0)

@@ -169,7 +169,7 @@ def main(room_id):
                    f'q=0.7,zh-CN;q=0.6,ru;q=0.5? Origin: https://www.bigo.tv '
                    'User-Agent: Mozilla/5.0 (Windows NT 10.0;Win64; x64) '
                    'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36?"', '-i',
-                   m3u8_address, '-c:v', 'copy', '-c:a', 'copy', '-bsf:a', 'aac_adtstoasc',
+                   f"{m3u8_address}", '-c:v', 'copy', '-c:a', 'copy', '-bsf:a', 'aac_adtstoasc',
                    '-f', 'segment', '-segment_time', str(
                        segment_time), '-segment_start_number', '1',
                    os.path.join('download', f'{nick_name}_{room_id}-{get_time()}-{room_topic}_part%03d.{file_extensions}'), '-y']
@@ -177,7 +177,7 @@ def main(room_id):
             logger.debug('FFmpeg命令如下 ↓')
             command_str = ''
             for _ in command:
-                command_str += _
+                command_str += _ + ' '
             logger.debug(command_str)
         p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=False)
         rooms[room_id]['record_status'] = True

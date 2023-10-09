@@ -173,13 +173,13 @@ def main(room_id):
                    '-f', 'segment', '-segment_time', str(
                        segment_time), '-segment_start_number', '1',
                    os.path.join('download', f'{nick_name}_{room_id}-{get_time()}-{room_topic}_part%03d.{file_extensions}'), '-y']
+        command_str = ''
+        for _ in command:
+            command_str += _ + ' '
         if debug:
             logger.debug('FFmpeg命令如下 ↓')
-            command_str = ''
-            for _ in command:
-                command_str += _ + ' '
             logger.debug(command_str)
-        p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=False)
+        p = Popen(command_str, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
         rooms[room_id]['record_status'] = True
         start_time = last_record_time = get_timestamp()
         try:

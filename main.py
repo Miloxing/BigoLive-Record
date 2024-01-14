@@ -124,7 +124,7 @@ def record(p, last_record_time):
         #     logger.error('ffmpeg未正常退出，请检查日志文件！')
         #     rooms[room_id]['record_status'] = False
         #     break
-        print(line)
+        print(line,p.poll())
 
 
 def main(room_id):

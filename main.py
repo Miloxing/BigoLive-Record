@@ -120,11 +120,12 @@ def record(p, last_record_time):
         if 'Immediate exit requested' in line:
             logger.info('FFmpeg已被强制结束')
             break
-        # if p.poll() is not None:  # 如果FFmpeg已退出但没有被上一个判断和本循环第一个判断捕捉到，则当作异常退出
-        #     logger.error('ffmpeg未正常退出，请检查日志文件！')
-        #     rooms[room_id]['record_status'] = False
-        #     break
-        print(line,p.poll())
+        p_poll = p.poll()
+        if p_poll is not None and p_poll != -15:  # 如果FFmpeg已退出但没有被上一个判断和本循环第一个判断捕捉到，则当作异常退出
+            logger.error('ffmpeg未正常退出，请检查日志文件！')
+            rooms[room_id]['record_status'] = False
+            break
+        #print(line,p.poll())
 
 
 def main(room_id):

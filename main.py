@@ -164,7 +164,7 @@ def main(room_id):
         nick_name = re.sub(rstr, "_", room_info['nick_name'])
         room_topic = re.sub(rstr, "_", room_info['roomTopic'])
         # 下面命令中的timeout单位为微秒，10000000us为10s（https://www.cnblogs.com/zhifa/p/12345376.html）
-        command = ['ffmpeg', '-rw_timeout', '10000000', '-timeout', '10000000', '-listen_timeout', '10000000',
+        command = ['ffmpeg', '-timeout', '10000000', '-listen_timeout', '10000000',
                    '-headers',
                    '"Accept: */*? Accept-Encoding: gzip, deflate, br? Accept-Language: zh,zh-TW;q=0.9,en-US;q=0.8,en;'
                    f'q=0.7,zh-CN;q=0.6,ru;q=0.5? Origin: https://www.bigo.tv '
@@ -180,8 +180,8 @@ def main(room_id):
         if debug:
             logger.debug('FFmpeg命令如下 ↓')
             logger.debug(command_str)
-        p = Popen(command_str, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
-        # p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        # p = Popen(command_str, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
+        p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         rooms[room_id]['record_status'] = True
         start_time = last_record_time = get_timestamp()
         try:

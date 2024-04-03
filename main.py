@@ -86,45 +86,51 @@ def get_time() -> str:
 
 
 def record(p, last_record_time):
-    """
-    录制过程中要执行的检测与判断
-    """
-    # global p, record_status, last_record_time, kill_times  # noqa
     kill_times = 0
     while True:
+        try:
+            # 检查FFmpeg进程是否存在
+            os.kill(p.pid, 0)
+        except OSError:
+            # 如果抛出OSError异常，说明进程已不存在
+            logger.info('FFmpeg进程已结束')
+            rooms[room_id]['record_status'] = False
+            break
+
         if not rooms[room_id]['record'] or rooms[room_id]['wait']:
-            p.send_signal(signal.SIGTERM)
-            time.sleep(0.5)
+            p.terminate()  # 尝试终止进程
+            p.wait(timeout=5)  # 等待进程结束，设置超时避免死锁
+            rooms[room_id]['record_status'] = False
+            break
+
         line = p.stdout.readline().decode()
-        p_poll = p.poll()
-        p.stdout.flush()
-        logger.log(15, line.rstrip()+str(p_poll))
+        if not line:
+            # 如果读取到的行为空，可能是进程已经结束
+            rooms[room_id]['record_status'] = False
+            break
+        if "Exiting" in line or "Error" in line:
+            # 如果检测到退出或错误信息，假设录制已经结束
+            rooms[room_id]['record_status'] = False
+            break
+
+        # 这里可以添加对line的其他处理逻辑
+        # 比如更新last_record_time或者根据输出内容判断录制状态
         if match('video:[0-9kmgB]* audio:[0-9kmgB]* subtitle:[0-9kmgB]*', line) or 'Exiting normally' in line:
             rooms[room_id]['record_status'] = False  # 如果FFmpeg正常结束录制则退出本循环
             break
-        elif match('frame=[0-9]', line) or 'Opening' in line:
-            last_record_time = get_timestamp()  # 获取最后录制的时间
-        elif 'Failed to read handshake response' in line:
-            time.sleep(5)  # FFmpeg读取m3u8流失败，等个5s康康会不会恢复
-            continue
-        time_diff = get_timestamp() - last_record_time  # 计算上次录制到目前的时间差
+
+        # 检查是否需要终止录制（示例中的逻辑）
+        time_diff = time.time() - last_record_time
         if time_diff >= 65:
-            logger.error('最后一次录制到目前已超65s，将尝试发送终止信号')
-            logger.debug(f'间隔时间：{time_diff}s')
+            logger.error('录制可能已卡住，尝试终止FFmpeg进程')
+            p.terminate()  # 尝试终止进程
+            p.wait(timeout=5)  # 等待进程结束，设置超时避免死锁
             kill_times += 1
-            # 若最后一次录制到目前已超过65s，则认为FFmpeg卡死，尝试发送终止信号
-            p.send_signal(signal.SIGTERM)
-            time.sleep(0.5)
             if kill_times >= 3:
-                logger.critical('由于无法结束FFmpeg进程，将尝试自我了结')
-                sys.exit(1)
-        if 'Immediate exit requested' in line:
-            logger.info('FFmpeg已被强制结束')
-            break
-        if p_poll is not None and p_poll != -15:  # 如果FFmpeg已退出但没有被上一个判断和本循环第一个判断捕捉到，则当作异常退出
-            logger.error('ffmpeg未正常退出，请检查日志文件！')
-            rooms[room_id]['record_status'] = False
-            break
+                logger.critical('多次尝试结束FFmpeg进程失败，直接结束子进程')
+                rooms[room_id]['record_status'] = False
+                break
+            last_record_time = time.time()  # 重置最后记录时间
 
 
 def main(room_id):

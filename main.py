@@ -85,7 +85,9 @@ def get_time() -> str:
     return dt
 
 
-def record(p, last_record_time):
+def record(p, last_record_time, command=None):
+    if command is None:
+        command = []
     kill_times = 0
     while True:
         try:
@@ -112,6 +114,13 @@ def record(p, last_record_time):
             # 如果检测到退出或错误信息，假设录制已经结束
             rooms[room_id]['record_status'] = False
             break
+
+        if "No route to host" in line:
+            logger.error('网络连接异常，等待5秒后重试')
+            time.sleep(5)
+            if command:
+                p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+            continue
 
         # 这里可以添加对line的其他处理逻辑
         # 比如更新last_record_time或者根据输出内容判断录制状态
@@ -186,12 +195,12 @@ def main(room_id):
         if debug:
             logger.debug('FFmpeg命令如下 ↓')
             logger.debug(command_str)
-        p = Popen(command_str, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
-        # p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        # p = Popen(command_str, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
+        p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         rooms[room_id]['record_status'] = True
         start_time = last_record_time = get_timestamp()
         try:
-            t = threading.Thread(target=record, args=(p, last_record_time,))
+            t = threading.Thread(target=record, args=(p, last_record_time,command))
             t.start()
             while True:
                 if not rooms[room_id]['record_status']:

@@ -195,8 +195,8 @@ def main(room_id):
         if debug:
             logger.debug('FFmpeg命令如下 ↓')
             logger.debug(command_str)
-        # p = Popen(command_str, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
-        p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        p = Popen(command_str, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
+        #p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         rooms[room_id]['record_status'] = True
         start_time = last_record_time = get_timestamp()
         try:

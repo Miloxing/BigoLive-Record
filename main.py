@@ -106,6 +106,7 @@ def record(p, last_record_time, command=None):
             break
 
         line = p.stdout.readline().decode()
+        print(line)
         if not line:
             # 如果读取到的行为空，可能是进程已经结束
             rooms[room_id]['record_status'] = False
@@ -140,6 +141,7 @@ def record(p, last_record_time, command=None):
                 rooms[room_id]['record_status'] = False
                 break
             last_record_time = time.time()  # 重置最后记录时间
+        time.sleep(0.1)
 
 
 def main(room_id):

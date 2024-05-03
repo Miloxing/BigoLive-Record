@@ -110,7 +110,7 @@ def record(p, last_record_time, command=None):
             # 如果读取到的行为空，可能是进程已经结束
             rooms[room_id]['record_status'] = False
             break
-        if "Exiting" in line or "Error" in line:
+        if "Exiting" in line or "Error" in line or "404 Not Found" in line:
             # 如果检测到退出或错误信息，假设录制已经结束
             rooms[room_id]['record_status'] = False
             break
@@ -119,7 +119,7 @@ def record(p, last_record_time, command=None):
             logger.error('网络连接异常，等待5秒后重试')
             time.sleep(5)
             if command:
-                p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+                p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
             continue
 
         # 这里可以添加对line的其他处理逻辑
@@ -200,7 +200,7 @@ def main(room_id):
         rooms[room_id]['record_status'] = True
         start_time = last_record_time = get_timestamp()
         try:
-            t = threading.Thread(target=record, args=(p, last_record_time,command))
+            t = threading.Thread(target=record, args=(p, last_record_time,command_str))
             t.start()
             while True:
                 if not rooms[room_id]['record_status']:

@@ -98,13 +98,13 @@ def record(p, last_record_time, command=None):
             logger.info('FFmpeg进程已结束')
             rooms[room_id]['record_status'] = False
             break
-
+        print("test")
         if not rooms[room_id]['record'] or rooms[room_id]['wait']:
             p.terminate()  # 尝试终止进程
             p.wait(timeout=5)  # 等待进程结束，设置超时避免死锁
             rooms[room_id]['record_status'] = False
             break
-
+        print("receive line")
         line = p.stdout.readline().decode()
         print(line)
         if not line:

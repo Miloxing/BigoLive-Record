@@ -98,21 +98,23 @@ def record(p, room_id, last_record_time, command=None):
             logger.info('FFmpeg进程已结束')
             rooms[room_id]['record_status'] = False
             break
-        print("test")
+        logger.debug("test")
         if not rooms[room_id]['record'] or rooms[room_id]['wait']:
             p.terminate()  # 尝试终止进程
             p.wait(timeout=5)  # 等待进程结束，设置超时避免死锁
             rooms[room_id]['record_status'] = False
             break
-        print("receive line")
+        logger.debug("receive line")
         line = p.stdout.readline().decode()
-        print(line)
+        logger.debug(line)
         if not line:
             # 如果读取到的行为空，可能是进程已经结束
+            logger.debug(room_id+'读取到空行，可能是进程已结束')
             rooms[room_id]['record_status'] = False
             break
         if "Exiting" in line or "Error" in line or "404 Not Found" in line:
             # 如果检测到退出或错误信息，假设录制已经结束
+            logger.error(f'检测到FFmpeg输出：{line}')
             rooms[room_id]['record_status'] = False
             break
 
@@ -126,6 +128,7 @@ def record(p, room_id, last_record_time, command=None):
         # 这里可以添加对line的其他处理逻辑
         # 比如更新last_record_time或者根据输出内容判断录制状态
         if match('video:[0-9kmgB]* audio:[0-9kmgB]* subtitle:[0-9kmgB]*', line) or 'Exiting normally' in line:
+            logger.info(f'检测到FFmpeg输出：{line}')
             rooms[room_id]['record_status'] = False  # 如果FFmpeg正常结束录制则退出本循环
             break
 

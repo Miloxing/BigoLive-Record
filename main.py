@@ -30,7 +30,7 @@ from regex import match
 
 # 导入配置
 from config import *   # noqa
-from free_size_config import *
+import free_size_config
 
 rooms = {}  # 记录各room状态
 
@@ -223,8 +223,8 @@ def main(room_id):
             logger.info('若长时间卡住，请再次按下ctrl+c (可能会损坏视频文件)')
             logger.info('Bye!')
             sys.exit(0)
-        logger.debug("wait:"+str(wait))
-        if wait:
+        logger.debug("wait:"+str(free_size_config.wait))
+        if free_size_config.wait:
             logger.info(f'空间不足，停止录制 {room_id}')
             break
         logger.info('FFmpeg已退出，重新开始检测直播间')
@@ -239,14 +239,14 @@ if __name__ == '__main__':
     logger.info('准备开始录制...')
     time.sleep(0.3)
     while True:
-        run()
+        free_size_config.run()
         try:
             from config import *
             for room_id in room_ids:
-                if room_id not in rooms and (not wait or room_id in keep):
+                if room_id not in rooms and (not free_size_config.wait or room_id in free_size_config.keep):
 
                     rooms[room_id] = {"record": True}
-                    if room_id in keep:
+                    if room_id in free_size_config.keep:
                         rooms[room_id]['wait'] = False
                     else:
                         rooms[room_id]['wait'] = True

@@ -85,7 +85,7 @@ def get_time() -> str:
     return dt
 
 
-def record(p, last_record_time, command=None):
+def record(p, room_id, last_record_time, command=None):
     if command is None:
         command = []
     kill_times = 0
@@ -198,7 +198,7 @@ def main(room_id):
         rooms[room_id]['record_status'] = True
         start_time = last_record_time = get_timestamp()
         try:
-            t = threading.Thread(target=record, args=(p, last_record_time,command_str))
+            t = threading.Thread(target=record, args=(p, room_id, last_record_time,command_str))
             t.start()
             while True:
                 if not rooms[room_id]['record_status']:

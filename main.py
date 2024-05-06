@@ -147,7 +147,7 @@ def record(p, last_record_time, command=None):
 def main(room_id):
     global rooms
     # global p, room_id, record_status, last_record_time, kill_times  # noqa
-    while True:    
+    while True:
         rooms[room_id]['record_status'] = False
         while True:
             logger.info('------------------------------')
@@ -182,11 +182,7 @@ def main(room_id):
         room_topic = re.sub(rstr, "_", room_info['roomTopic'])
         # 下面命令中的timeout单位为微秒，10000000us为10s（https://www.cnblogs.com/zhifa/p/12345376.html）
         command = ['ffmpeg', '-timeout', '10000000', '-listen_timeout', '10000000',
-                   '-headers',
-                   '"Accept: */*? Accept-Encoding: gzip, deflate, br? Accept-Language: zh,zh-TW;q=0.9,en-US;q=0.8,en;'
-                   f'q=0.7,zh-CN;q=0.6,ru;q=0.5? Origin: https://www.bigo.tv '
-                   'User-Agent: Mozilla/5.0 (Windows NT 10.0;Win64; x64) '
-                   'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Safari/537.36?"', '-i',
+                   '-i',
                    f"{m3u8_address}", '-c:v', 'copy', '-c:a', 'copy',
                    '-f', 'segment', '-segment_time', str(
                        segment_time), '-segment_start_number', '1',

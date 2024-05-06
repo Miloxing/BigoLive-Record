@@ -95,11 +95,12 @@ def record(p, room_id, last_record_time, command=None):
             os.kill(p.pid, 0)
         except OSError:
             # 如果抛出OSError异常，说明进程已不存在
-            logger.info('FFmpeg进程已结束')
+            logger.info(room_id+'FFmpeg进程已结束')
             rooms[room_id]['record_status'] = False
             break
         logger.debug("test")
         if not rooms[room_id]['record'] or rooms[room_id]['wait']:
+            logger.info(room_id+'停止录制')
             p.terminate()  # 尝试终止进程
             p.wait(timeout=5)  # 等待进程结束，设置超时避免死锁
             rooms[room_id]['record_status'] = False

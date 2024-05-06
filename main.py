@@ -223,7 +223,7 @@ def main(room_id):
             logger.info('若长时间卡住，请再次按下ctrl+c (可能会损坏视频文件)')
             logger.info('Bye!')
             sys.exit(0)
-        logger.debug("wait:"+wait)
+        logger.debug("wait:"+str(wait))
         if wait:
             logger.info(f'空间不足，停止录制 {room_id}')
             break

@@ -29,7 +29,7 @@ import requests
 from regex import match
 
 # 导入配置
-from config import *   # noqa
+from config import *  # noqa
 import free_size_config
 
 rooms = {}  # 记录各room状态
@@ -85,6 +85,15 @@ def get_time() -> str:
     return dt
 
 
+def move_file(src, target):
+    """
+    移动文件
+    """
+    if not os.path.exists(target):
+        os.makedirs(target)
+    os.system(f"mv {src} {target}/")
+
+
 def record(p, room_id, last_record_time, command=None):
     if command is None:
         command = []
@@ -95,12 +104,12 @@ def record(p, room_id, last_record_time, command=None):
             os.kill(p.pid, 0)
         except OSError:
             # 如果抛出OSError异常，说明进程已不存在
-            logger.info(room_id+'FFmpeg进程已结束')
+            logger.info(room_id + 'FFmpeg进程已结束')
             rooms[room_id]['record_status'] = False
             break
         logger.debug("test")
         if not rooms[room_id]['record'] or rooms[room_id]['wait']:
-            logger.info(room_id+'停止录制')
+            logger.info(room_id + '停止录制')
             p.terminate()  # 尝试终止进程
             p.wait(timeout=5)  # 等待进程结束，设置超时避免死锁
             rooms[room_id]['record_status'] = False
@@ -110,7 +119,7 @@ def record(p, room_id, last_record_time, command=None):
         logger.debug(line)
         if not line:
             # 如果读取到的行为空，可能是进程已经结束
-            logger.debug(room_id+'读取到空行，可能是进程已结束')
+            logger.debug(room_id + '读取到空行，可能是进程已结束')
             rooms[room_id]['record_status'] = False
             break
         if "Exiting" in line or "Error" in line or "404 Not Found" in line:
@@ -158,8 +167,8 @@ def main(room_id):
             logger.info(f'正在检测直播间：{room_id}')
             try:
                 room_info = requests.post(f'https://ta.bigo.tv/official_website/studio/getInternalStudioInfo',
-                                         timeout=5,
-                                         data={'siteId': room_id})
+                                          timeout=5,
+                                          data={'siteId': room_id})
             except (requests.exceptions.ReadTimeout, requests.exceptions.Timeout, requests.exceptions.ConnectTimeout):
                 logger.error(f'无法连接至B站API，等待{check_time}s后重新开始检测')
                 time.sleep(check_time)
@@ -184,13 +193,14 @@ def main(room_id):
         m3u8_address = live_status
         nick_name = re.sub(rstr, "_", room_info['nick_name'])
         room_topic = re.sub(rstr, "_", room_info['roomTopic'])
+        file_name_head = f"{nick_name}_{room_id}-{get_time()}-{room_topic}"
         # 下面命令中的timeout单位为微秒，10000000us为10s（https://www.cnblogs.com/zhifa/p/12345376.html）
         command = ['ffmpeg', '-timeout', '10000000', '-listen_timeout', '10000000',
                    '-i',
                    f"{m3u8_address}", '-c:v', 'copy', '-c:a', 'copy',
                    '-f', 'segment', '-segment_time', str(
-                       segment_time), '-segment_start_number', '1',
-                   os.path.join('download', f'{nick_name}_{room_id}-{get_time()}-{room_topic}_part%03d.{file_extensions}'), '-y']
+                segment_time), '-segment_start_number', '1',
+                   os.path.join('download', f'{file_name_head}_part%03d.{file_extensions}'), '-y']
         command_str = ''
         for _ in command:
             command_str += _ + ' '
@@ -198,11 +208,11 @@ def main(room_id):
             logger.debug('FFmpeg命令如下 ↓')
             logger.debug(command_str)
         p = Popen(command_str, stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True)
-        #p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+        # p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=STDOUT)
         rooms[room_id]['record_status'] = True
         start_time = last_record_time = get_timestamp()
         try:
-            t = threading.Thread(target=record, args=(p, room_id, last_record_time,command_str))
+            t = threading.Thread(target=record, args=(p, room_id, last_record_time, command_str))
             t.start()
             while True:
                 if not rooms[room_id]['record_status']:
@@ -223,7 +233,15 @@ def main(room_id):
             logger.info('若长时间卡住，请再次按下ctrl+c (可能会损坏视频文件)')
             logger.info('Bye!')
             sys.exit(0)
-        logger.debug("wait:"+str(free_size_config.wait))
+        # 移动已停止下载的文件
+        logger.debug('移动已停止下载的文件')
+        source_path = os.path.join('download', f"{file_name_head}_*")
+        target_path = os.path.join('up', f"{nick_name}_{room_id}")
+        try:
+            move_file(source_path, target_path)
+        except:
+            logger.error(f'移动文件失败 ↓\n{traceback.format_exc()}')
+        logger.debug("wait:" + str(free_size_config.wait))
         if free_size_config.wait:
             logger.info(f'空间不足，停止录制 {room_id}')
             break
@@ -242,6 +260,7 @@ if __name__ == '__main__':
         free_size_config.run()
         try:
             from config import *
+
             for room_id in room_ids:
                 if room_id not in rooms and (not free_size_config.wait or room_id in free_size_config.keep):
 

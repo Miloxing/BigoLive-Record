@@ -144,7 +144,7 @@ def record(p, room_id, last_record_time, command=None):
 
         # 检查是否需要终止录制（示例中的逻辑）
         time_diff = time.time() - last_record_time
-        if time_diff >= 65:
+        if time_diff >= 125:
             logger.error('录制可能已卡住，尝试终止FFmpeg进程')
             p.terminate()  # 尝试终止进程
             p.wait(timeout=5)  # 等待进程结束，设置超时避免死锁

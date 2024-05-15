@@ -15,7 +15,7 @@ while [ true ]; do
         fi
         echo "超时时间为${timeout}秒"
         timeout -s SIGINT $timeout rclone move up $temp:milo/bigo -P
-        rclone rmdir "up"
+        rclone rmdirs "up"
     fi
     sleep 60
     source /root/u/milo.conf

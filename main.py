@@ -144,7 +144,7 @@ def record(p, room_id, last_record_time, command=None):
 
         # 检查是否需要终止录制（示例中的逻辑）
         time_diff = time.time() - last_record_time
-        if time_diff >= 125:
+        if time_diff >= 65:
             logger.error('录制可能已卡住，尝试终止FFmpeg进程')
             p.terminate()  # 尝试终止进程
             p.wait(timeout=5)  # 等待进程结束，设置超时避免死锁
@@ -153,8 +153,7 @@ def record(p, room_id, last_record_time, command=None):
                 logger.critical('多次尝试结束FFmpeg进程失败，直接结束子进程')
                 rooms[room_id]['record_status'] = False
                 break
-            last_record_time = time.time()  # 重置最后记录时间
-        time.sleep(0.1)
+        last_record_time = time.time()  # 重置最后记录时间
 
 
 def main(room_id):
@@ -235,7 +234,7 @@ def main(room_id):
             sys.exit(0)
         # 移动已停止下载的文件
         logger.debug('移动已停止下载的文件')
-        source_path = os.path.join('download', f"{file_name_head}_*")
+        source_path = os.path.join('download', f"{nick_name}*")
         target_path = os.path.join('up', f"{nick_name}_{room_id}")
         try:
             move_file(source_path, target_path)
